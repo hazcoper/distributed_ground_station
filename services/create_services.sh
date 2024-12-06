@@ -18,22 +18,22 @@ for service_file in "$SERVICE_DIR"/*.service; do
     if [[ -f "$service_file" ]]; then
         echo "Processing $service_file..."
         
-        # # Copy the service file to /etc/systemd/system
-        # cp "$service_file" /etc/systemd/system/
+      # Copy the service file to /etc/systemd/system
+      cp "$service_file" /etc/systemd/system/
         
-        # # Set permissions
-        # chmod 644 /etc/systemd/system/$(basename "$service_file")
+      # Set permissions
+      chmod 644 /etc/systemd/system/$(basename "$service_file")
         
-        # # Reload systemd manager configuration
-        # systemctl daemon-reload
+      # Reload systemd manager configuration
+      systemctl daemon-reload
         
-        # # Enable the service to start on boot
-        # systemctl enable $(basename "$service_file")
+      # Enable the service to start on boot
+      systemctl enable $(basename "$service_file")
         
-        # # Start the service
-        # systemctl start $(basename "$service_file")
+      # Start the service
+      systemctl start $(basename "$service_file")
         
-        # echo "Service $(basename "$service_file") has been installed, enabled, and started."
+      echo "Service $(basename "$service_file") has been installed, enabled, and started."
     else
         echo "No service files found in $SERVICE_DIR."
     fi
