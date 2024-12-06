@@ -1,6 +1,7 @@
 [Unit]
 Description=TNC Client Service
 After=sattelite_predictor_gs_launcher.service
+Requires=sattelite_predictor_gs_launcher.service
 
 [Service]
 Type=simple
