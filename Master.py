@@ -217,9 +217,9 @@ class Master:
         
         passage_number = self.getCurrentPassageNumber()
         
-        # if passage_number == -1:
-        #     self.logger.debug(f"  Satellite not in line of sight, not saving data")
-        #     return False
+        if passage_number == -1:
+            self.logger.debug(f"  Satellite not in line of sight, not saving data")
+            return False
         
         output_dict = {
             "timestamp": timestamp,                          # float timestamp when the frame was received
