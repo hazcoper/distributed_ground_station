@@ -1,0 +1,15 @@
+[Unit]
+Description=TNC Client Service
+After=network.target
+
+[Service]
+Type=simple
+User=cs5cep
+WorkingDirectory=/home/cs5cep/Documents/distributed_ground_station
+ExecStart=/usr/bin/python3 /home/cs5cep/Documents/distributed_ground_station/Master.py
+Restart=always
+RestartSec=5
+Environment="PYTHONUNBUFFERED=1"
+
+[Install]
+WantedBy=multi-user.target
