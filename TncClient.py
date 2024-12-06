@@ -82,7 +82,7 @@ class TncClient:
         console_handler.setLevel(logging.DEBUG)
 
         # Create file handler
-        log_path = os.path.join(self.Config.get("log_folder"), f"TC:{tncHost}:{tncPort}.log")
+        log_path = os.path.join(self.Config.get("log_folder"), f"TC_{tncHost}_{tncPort}.log")
         file_handler = logging.FileHandler(log_path)
         file_handler.setLevel(logging.DEBUG)
 
