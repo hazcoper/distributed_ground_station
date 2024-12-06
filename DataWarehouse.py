@@ -281,6 +281,9 @@ class DataWarehouse:
         # add the data to the passage
         self.passageDict[data_dict["passage_number"]]["frame_list"].append(data_dict)
         
+        # increment the frame_count
+        self.passageDict[data_dict["passage_number"]]["frame_count"] += 1
+        
         self.logger.debug(f"  Data added to passage {data_dict['passage_number']}")
 
         return True
