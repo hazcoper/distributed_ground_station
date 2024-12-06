@@ -63,10 +63,6 @@ class Passage_Scheduler:
         self.sat_predictor_proxy = xmlrpc.client.ServerProxy(f"http://{self.sat_predictor_host}:{self.sat_predictor_port}")
         self.logger.debug(f"SatPredictor endpoint: {self.sat_predictor_host}:{self.sat_predictor_port}")
         
-        # the keys that are expected to be present in a passage dict
-        # self.EX_PASSAGE_KEYS = ["aos", "los", "peak_elevation", "start_azimuth", "end_azimuth", "at_list", "az_list", "time_interval"]
-        # self.EX_PASSAGE_TYPES = [float, float, float, float, float, list, list, list]
-
         self.EX_PASSAGE_KEYS = ["azimuth_elevation", "tle_line1", "tle_line2","time_interval", 
                                 "aos", "los", "start_azimuth", "end_azimuth", "max_elevation"]
         self.EX_PASSAGE_TYPES = [list, str, str, list, float, float, float, float, float]
@@ -128,6 +124,8 @@ class Passage_Scheduler:
             next_passages = self.sat_predictor_proxy.remoteGetNextPasses()
         except Exception as E:
             self.logger.error(f"Error while trying to get next passages: {E}")
+            # schedule to run again in 10 seconds
+            schedule.every(10).seconds.do(self.checkPassages)
             return False
 
         # check if the data is correct
