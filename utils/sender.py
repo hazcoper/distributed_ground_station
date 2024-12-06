@@ -1,0 +1,59 @@
+import socket
+import time
+
+# KISS special characters
+KISS_FEND = 0xC0  # Frame End
+KISS_FESC = 0xDB  # Frame Escape
+KISS_TFEND = 0xDC # Transposed Frame End
+KISS_TFESC = 0xDD # Transposed Frame Escape
+
+def encode_kiss(data):
+    """Encode AX.25 data in KISS format."""
+    encoded = bytearray()
+    for byte in data:
+        if byte == KISS_FEND:
+            encoded.append(KISS_FESC)
+            encoded.append(KISS_TFEND)
+        elif byte == KISS_FESC:
+            encoded.append(KISS_FESC)
+            encoded.append(KISS_TFESC)
+        else:
+            encoded.append(byte)
+    return bytes([KISS_FEND, 0x00]) + encoded + bytes([KISS_FEND])
+
+def send_ax25_frame(host, port, ax25_frame):
+    """Send an AX.25 frame to a TNC over a TCP connection."""
+    kiss_frame = encode_kiss(ax25_frame)
+
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client:
+            print(f"Connecting to TNC at {host}:{port}...")
+            client.connect((host, port))
+            print(f"Connected. Sending AX.25 frame...")
+            client.sendall(kiss_frame)
+            print("Frame sent successfully.")
+    except Exception as e:
+        print(f"Error sending AX.25 frame: {e}")
+
+if __name__ == "__main__":
+    # Example AX.25 frame: destination callsign, source callsign, control, protocol, and payload
+    ax25_frame = bytes([
+        0x9E, 0x88, 0x8A, 0x8E, 0x40, 0x60,  # Destination: "N0CALL-0"
+        0x9C, 0x88, 0x8A, 0x8E, 0x40, 0x61,  # Source: "N0SRC-0"
+        0x03,                                # Control: UI frame
+        0xF0,                                # Protocol: No layer 3 protocol
+        0x48, 0x65, 0x6C, 0x6C, 0x6F, 0x21   # Payload: "Hello!"
+    ])
+    
+    ax_generated = bytes([
+        0x86, 0xa2, 0x86, 0xa2, 0x86, 0xa2, 0x60, 0x86, 0xa8, 0x6c, 0x92, 0xa6, 0xa8, 0x63, 0x03, 0x00, 0x00, 0x00, 0x03, 0x84, 0x00, 0x01, 0x7d, 0x00, 0x00, 0x00, 0x00, 0x52, 0xe2, 0x6f, 0x14, 0x00, 0x7a, 0x32, 0x03, 0x00, 0x02, 0x02, 0xd9, 0x36, 0xae, 0xff, 0x56, 0x60, 0x2e, 0x00, 0x91, 0xc4, 0x02, 0x00, 0xb6, 0xda, 0x02, 0x00, 0x9a, 0x2b, 0x00, 0x00, 0x76, 0x98, 0x0c, 0x00, 0x6b, 0xd0, 0x76, 0x26, 0xff, 0x08, 0x0f, 0x0e, 0xa7, 0xc6, 0x87, 0x25, 0x83, 0x5d, 0xde, 0x33, 0x8b, 0xd8, 0x74, 0x00, 0x24, 0x74, 0x68, 0x00, 0xf0, 0xa9, 0x03, 0x00, 0x1b, 0x3a, 0x74, 0x00, 0x26, 0x95, 0x53, 0x00, 0x38, 0x9a, 0x00, 0x00, 0x97, 0xbb, 0x00, 0x00, 0x03, 0x03, 0x00, 0x00
+    ])
+
+    # TNC details
+    tnc_host = "172.20.38.96"  # Replace with your TNC's IP address
+    tnc_port = 8000         # Replace with your TNC's port
+
+    # Send the frame
+    while True:
+        send_ax25_frame(tnc_host, tnc_port, ax_generated)
+        time.sleep(5)
