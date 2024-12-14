@@ -329,6 +329,12 @@ class SatellitePredictor:
                     topocentric = (self.satellite - self.observer).at(times[i])
                     end_azimuth = float(topocentric.altaz()[1].degrees)
                     
+                    # filter passes lower than 10 degress
+                    if peak_elevation < 10:
+                        aos, los, peak_elevation = None, None, 0
+                        start_azimuth, end_azimuth = None, None
+                        continue
+                    
                     # calculate and store the orbit parametric formulas
                     number_of_points = 20
                     self.logger.debug(f"los: {los} and aos: {aos}")
