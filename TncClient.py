@@ -187,12 +187,15 @@ class TncClient:
         """
         
         while True:
-            if self.receiveData():
-                decoded_data = self.processData()
-                self.forwardData(decoded_data)
-            else:
+            try:
+                if self.receiveData():
+                    decoded_data = self.processData()
+                    self.forwardData(decoded_data)
+                else:
+                    self.attemptConnection()
+            except Exception as e:
+                self.logger.error(f"Error in main loop: {e}")
                 self.attemptConnection()
-
 
 def startSingle(tncHost, tncPort):
     tnc = TncClient(tncHost, tncPort)
