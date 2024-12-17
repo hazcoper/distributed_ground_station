@@ -83,7 +83,7 @@ class SatellitePredictor:
         self.server_port = self.Config.get("sat_predictor_rpc_port")
         self.logger.debug(f"SatPredictor server endpoint: {self.server_host}:{self.server_port}")
         self.server = SimpleXMLRPCServer((self.server_host, self.server_port))
-        self.registerFunctoins()
+        self.registerFunctions()
         
         
         self.observer = Topos(latitude_degrees=observer_latitude, longitude_degrees=observer_longitude)
@@ -102,7 +102,7 @@ class SatellitePredictor:
         # Create the satellite object
         self.createSatellite()
 
-    def registerFunctoins(self):
+    def registerFunctions(self):
         """
         Will register the functions that will be available to the cliets
         """
