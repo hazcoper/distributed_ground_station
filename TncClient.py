@@ -127,6 +127,7 @@ class TncClient:
                 break
             except Exception as e:
                 self.logger.error(f"Failed to connect to TNC at {self.tncHost}:{self.tncPort}, retrying in 5 seconds")
+                self.logger.error(f"  Error: {e}")
                 time.sleep(5)
 
 

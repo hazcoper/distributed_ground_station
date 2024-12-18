@@ -89,11 +89,12 @@ class SatellitePredictor:
         self.observer = Topos(latitude_degrees=observer_latitude, longitude_degrees=observer_longitude)
         self.ts = load.timescale()
         self.satcat_id = satcat_id
-        # self.satcat_id = 22739
         
         self.tle_line1 = None
         self.tle_line2 = None
         self.satellite = None
+        
+        self.last_tle_update = datetime.now() - timedelta(hour=2)
 
         # Update the TLE data
         # self.updateTLE()
@@ -152,11 +153,18 @@ class SatellitePredictor:
         Automatically updates the TLE data from CelesTrak using the satcat ID.
         Requires an internet connection.
         """
+
+        if datetime.now() - self.last_tle_update < timedelta(hours=1):
+            # means that the last update was less than an hour ago dont want to performn another one
+            self.logger.warning("Last update was less than an hour ago")
+            return False
+
         try:
             # Fetch TLE data from CelesTrak for the given satcat ID
             url = f"https://celestrak.org/NORAD/elements/gp.php?CATNR={self.satcat_id}"
             response = requests.get(url)
             response.raise_for_status()
+            self.last_tle_update = datetime.now()
 
             # Parse the TLE lines
             tle_data = response.text.strip().split("\n")
@@ -275,113 +283,112 @@ class SatellitePredictor:
             return None, None, None, None, None
 
             
-    def getNextPasses(self, num_passes=10):
-        """
-        Calculates the next `num_passes` passages of the satellite over the observer.
-        Args:
-            num_passes (int): Number of satellite passes to calculate.
-        Returns:
-            List of dictionaries containing:
-                - aos (datetime): Acquisition of Signal (rise time)
-                - los (datetime): Loss of Signal (set time)
-                - peak_elevation (float): Maximum elevation (degrees) during the pass
-                - start_azimuth (float): Azimuth (degrees) at AOS
-                - end_azimuth (float): Azimuth (degrees) at LOS
-        """
-        if self.satellite is None:
-            raise ValueError(f"Satellite object not created for {self.satcat_id}")
+def getNextPasses(self, num_passes=10):
+    """
+    Calculates the next `num_passes` passages of the satellite over the observer.
+    Args:
+        num_passes (int): Number of satellite passes to calculate.
+    Returns:
+        List of dictionaries containing:
+            - aos (datetime): Acquisition of Signal (rise time)
+            - los (datetime): Loss of Signal (set time)
+            - peak_elevation (float): Maximum elevation (degrees) during the pass
+            - start_azimuth (float): Azimuth (degrees) at AOS
+            - end_azimuth (float): Azimuth (degrees) at LOS
+    """
+    self.logger.info("Starting to calculate next satellite passes.")
+    self.logger.debug(f"Number of passes requested: {num_passes}")
 
-        # List to hold the passes
-        passes = []
-        now = self.ts.now()
-        
-        # # now should be 4h and 10 min ahead of current time
-        # now = self.ts.utc(now.utc_datetime() + timedelta(hours=3, minutes=32))
-        # self.logger.debug(f"This is the current time: {now.utc_datetime()}")
-        
-        search_start = now
+    if self.satellite is None:
+        error_message = f"Satellite object not created for {self.satcat_id}"
+        self.logger.error(error_message)
+        raise ValueError(error_message)
 
-        # Keep finding passes until we have the desired number
-        while len(passes) < num_passes:
-            search_end = self.ts.utc(search_start.utc_datetime() + timedelta(days=1))
+    passes = []
+    now = self.ts.now()
+    self.logger.debug(f"Current time (UTC): {now.utc_datetime()}")
 
-            try:
-                times, events = self.satellite.find_events(self.observer, search_start, search_end, altitude_degrees=0.0)
-            except ValueError as e:
-                self.logger.error(f"Error finding events: {e}")
-                break
+    search_start = now
+    self.logger.debug(f"Search start time initialized to: {search_start.utc_datetime()}")
 
-            aos, los, peak_elevation = None, None, 0
-            start_azimuth, end_azimuth = None, None
+    while len(passes) < num_passes:
+        search_end = self.ts.utc(search_start.utc_datetime() + timedelta(days=1))
+        self.logger.debug(f"Search end time set to: {search_end.utc_datetime()}")
 
-            for i, event in enumerate(events):
-                time = times[i].utc_datetime()
+        try:
+            times, events = self.satellite.find_events(self.observer, search_start, search_end, altitude_degrees=0.0)
+            self.logger.debug(f"Found {len(events)} events in the range {search_start.utc_datetime()} to {search_end.utc_datetime()}.")
+        except ValueError as e:
+            self.logger.error(f"Error finding events: {e}")
+            break
 
-                if event == 0:  # Rise (AOS)
-                    aos = time
-                    topocentric = (self.satellite - self.observer).at(times[i])
-                    start_azimuth = float(topocentric.altaz()[1].degrees)
-                elif event == 1:  # Culmination (Peak)
-                    topocentric = (self.satellite - self.observer).at(times[i])
-                    peak_elevation = float(max(peak_elevation, topocentric.altaz()[0].degrees))
-                elif event == 2:  # Set (LOS)
-                    los = time
-                    topocentric = (self.satellite - self.observer).at(times[i])
-                    end_azimuth = float(topocentric.altaz()[1].degrees)
-                    
-                    # filter passes lower than 10 degress
-                    if peak_elevation < 10:
-                        aos, los, peak_elevation = None, None, 0
-                        start_azimuth, end_azimuth = None, None
-                        continue
-                    
-                    # calculate and store the orbit parametric formulas
-                    number_of_points = 20
-                    self.logger.debug(f"los: {los} and aos: {aos}")
-                    interval = (los - aos).total_seconds() / number_of_points
-                    time_interval = [aos + timedelta(seconds=i * interval) for i in range(number_of_points)]
-                    
-                    azimuth_elevation = []
+        aos, los, peak_elevation = None, None, 0
+        start_azimuth, end_azimuth = None, None
 
-                    for t in time_interval:
-                        topocentric = (self.satellite - self.observer).at(self.ts.utc(t))
-                        alt, az, _ = topocentric.altaz()
-                        azimuth_elevation.append([float(az.degrees), float(alt.degrees)])
-                        # human_time = t.strftime("%Y-%m-%d %H:%M:%S")  # display the time in human time
-                    
-                    # convert time_interval to float
-                    time_interval = [t.timestamp() for t in time_interval]
-                    # Add the pass data if valid
-                    if aos and los:
-                        # convert aos to float
-                        passes.append({
-                            "aos": aos.timestamp(),
-                            "los": los.timestamp(),
-                            "max_elevation": peak_elevation,
-                            "start_azimuth": start_azimuth,
-                            "end_azimuth": end_azimuth,
-                            "tle_line1": self.tle_line1,
-                            "tle_line2": self.tle_line2,
-                            "azimuth_elevation": azimuth_elevation,
-                            "time_interval": time_interval
-                        })
-                        
-                        for key in passes[-1]:
-                            self.logger.debug(f"  {key}: {type(passes[-1][key])}")
+        for i, event in enumerate(events):
+            time = times[i].utc_datetime()
+            self.logger.debug(f"Processing event {i}: {event} at {time}")
 
+            if event == 0:  # Rise (AOS)
+                aos = time
+                topocentric = (self.satellite - self.observer).at(times[i])
+                start_azimuth = float(topocentric.altaz()[1].degrees)
+                self.logger.debug(f"AOS detected at {aos} with start azimuth: {start_azimuth:.2f}°")
+            elif event == 1:  # Culmination (Peak)
+                topocentric = (self.satellite - self.observer).at(times[i])
+                peak_elevation = float(max(peak_elevation, topocentric.altaz()[0].degrees))
+                self.logger.debug(f"Peak elevation updated to: {peak_elevation:.2f}°")
+            elif event == 2:  # Set (LOS)
+                los = time
+                topocentric = (self.satellite - self.observer).at(times[i])
+                end_azimuth = float(topocentric.altaz()[1].degrees)
+                self.logger.debug(f"LOS detected at {los} with end azimuth: {end_azimuth:.2f}°")
 
-                        # Reset variables for the next pass
-                        aos, los, peak_elevation = None, None, 0
-                        start_azimuth, end_azimuth = None, None
+                if peak_elevation < 10:
+                    self.logger.info(f"Pass filtered out due to low peak elevation ({peak_elevation:.2f}° < 10°).")
+                    aos, los, peak_elevation = None, None, 0
+                    start_azimuth, end_azimuth = None, None
+                    continue
 
-                    # Break early if we have enough passes
-                    if len(passes) >= num_passes:
-                        break
+                number_of_points = 20
+                self.logger.debug(f"Calculating azimuth/elevation points for pass. Number of points: {number_of_points}")
+                interval = (los - aos).total_seconds() / number_of_points
+                time_interval = [aos + timedelta(seconds=i * interval) for i in range(number_of_points)]
+                
+                azimuth_elevation = []
+                for t in time_interval:
+                    topocentric = (self.satellite - self.observer).at(self.ts.utc(t))
+                    alt, az, _ = topocentric.altaz()
+                    azimuth_elevation.append([float(az.degrees), float(alt.degrees)])
 
-            # Move search start to just after the current search end
-            search_start = search_end
+                time_interval = [t.timestamp() for t in time_interval]
+                if aos and los:
+                    passes.append({
+                        "aos": aos.timestamp(),
+                        "los": los.timestamp(),
+                        "max_elevation": peak_elevation,
+                        "start_azimuth": start_azimuth,
+                        "end_azimuth": end_azimuth,
+                        "tle_line1": self.tle_line1,
+                        "tle_line2": self.tle_line2,
+                        "azimuth_elevation": azimuth_elevation,
+                        "time_interval": time_interval
+                    })
+                    self.logger.info(f"Pass added. AOS: {aos}, LOS: {los}, Peak Elevation: {peak_elevation:.2f}°")
+                    self.logger.debug(f"Pass details: {passes[-1]}")
 
-        return passes
+                    aos, los, peak_elevation = None, None, 0
+                    start_azimuth, end_azimuth = None, None
+
+                if len(passes) >= num_passes:
+                    self.logger.info(f"Desired number of passes ({num_passes}) reached.")
+                    break
+
+        search_start = search_end
+        self.logger.debug(f"Moving search start to: {search_start.utc_datetime()}")
+
+    self.logger.info(f"Completed calculation. Total passes found: {len(passes)}")
+    return passes
 
 
 
