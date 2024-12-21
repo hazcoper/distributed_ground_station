@@ -190,7 +190,11 @@ class TncClient:
         while True:
             try:
                 if self.receiveData():
-                    decoded_data = self.processData()
+                    
+                    if len(self.data) < 10:
+                        self.logger.warning("Invalid frame size, skippings")
+                        continue
+                    decoded_data = self.processData()                    
                     self.forwardData(decoded_data)
                 else:
                     self.attemptConnection()
