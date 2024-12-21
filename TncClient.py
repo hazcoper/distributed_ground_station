@@ -170,6 +170,10 @@ class TncClient:
         timestamp (float) - the timestamp when the frame was received
         """
         
+        if data is None:
+            self.logger.warning("Received None data to forward, skipping")
+            return False
+        
         # conevrt the data to a string
         byte_str = print_byte_array(data)
         self.logger.debug(f"Forwarding data to the master: {byte_str}")
