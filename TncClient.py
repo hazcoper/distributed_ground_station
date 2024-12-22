@@ -196,7 +196,6 @@ class TncClient:
                 if self.receiveData():
                     
                     if len(self.data) < 10:
-                        self.logger.warning("Invalid frame size, skippings")
                         continue
                     decoded_data = self.processData()                    
                     self.forwardData(decoded_data)
