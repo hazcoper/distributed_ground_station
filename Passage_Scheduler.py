@@ -101,6 +101,10 @@ class Passage_Scheduler:
         """
         self.logger.info("[CHECK_PASSAGES] Starting passage check.")
 
+        # check if everything has been cancelled
+        all_jobs = schedule.get_jobs()
+        self.logger.debug(f"[CHECK_PASSAGES] Active jobs: {all_jobs}")
+
         try:
             next_passages = self.sat_predictor_proxy.remoteGetNextPasses()
             self.logger.info(f"[CHECK_PASSAGES] Retrieved {len(next_passages)} passages.")
@@ -108,13 +112,14 @@ class Passage_Scheduler:
             self.logger.error(f"[CHECK_PASSAGES] Error fetching passages: {e}")
             self.logger.debug(traceback.format_exc())
             schedule.every(10).seconds.do(self.checkPassages)
-            return False
+            return schedule.CancelJob
 
         for passage in next_passages:
             if not self.typeChecking(passage, self.EX_PASSAGE_KEYS, self.EX_PASSAGE_TYPES):
                 self.logger.error("[CHECK_PASSAGES] Invalid passage data format detected.")
                 self.logger.debug(f"[CHECK_PASSAGES] Passage data: {passage}")
-                return False
+                return schedule.CancelJob
+                
 
         current_time = datetime.datetime.now().timestamp()
         closest_passage = None
@@ -127,7 +132,8 @@ class Passage_Scheduler:
 
         if not closest_passage:
             self.logger.warning("[CHECK_PASSAGES] No valid passages found.")
-            return
+            return schedule.CancelJob
+            
 
         seconds_until_next_passage = closest_passage["aos"] - current_time
         self.logger.info(f"[CHECK_PASSAGES] Closest passage in {seconds_until_next_passage / 60:.2f} minutes.")
@@ -140,7 +146,8 @@ class Passage_Scheduler:
             except Exception as e:
                 self.logger.error(f"[CHECK_PASSAGES] Error preparing passage: {e}")
                 self.logger.debug(traceback.format_exc())
-                return False
+                return schedule.CancelJob
+
 
             los_time = closest_passage["los"]
             scheduled_los_time = datetime.datetime.fromtimestamp(los_time) + datetime.timedelta(minutes=1)
@@ -150,7 +157,14 @@ class Passage_Scheduler:
 
         next_run_time = max(60, seconds_until_next_passage / 60 + 20) if seconds_until_next_passage < 3600 else 60
         self.logger.info(f"[SCHEDULE] Next passage check scheduled in {next_run_time} minutes.")
+        
+        # logs the list of jobs
+        all_jobs = schedule.get_jobs()
+        self.logger.debug(f"[CHECK_PASSAGES] Active jobs: {all_jobs}")
+        
         schedule.every(next_run_time).minutes.do(self.checkPassages)
+        return schedule.CancelJob
+        
 
     def finishPassage(self):
         """
