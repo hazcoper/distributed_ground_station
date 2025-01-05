@@ -133,11 +133,8 @@ class TncClient:
 
     def receiveData(self):
         try:
-            self.logger.debug("Waiting for tnc data")
             self.data = self.client.recv(1024)
             self.last_message_timestamp = datetime.datetime.now().timestamp()    # not sure if this is okay. Do i get many things that are not a valid message?
-            self.logger.debug("Received data from TNC")
-            self.logger.debug(f"  Data: {self.data}")
         except Exception as e:
             self.logger.error(f"Error receiving data from TNC: {e}")
             return False
@@ -195,8 +192,13 @@ class TncClient:
             try:
                 if self.receiveData():
                     
-                    if len(self.data) < 10:
+                    if len(self.data) < 10:   # make sure that we are not receiving garbage
+                        time.sleep(1)    # add a little delay to reduce the load on the system
                         continue
+                    
+                    self.logger.debug("Received data from TNC")
+                    self.logger.debug(f"  Data: {self.data}")
+                    
                     decoded_data = self.processData()                    
                     self.forwardData(decoded_data)
                 else:
