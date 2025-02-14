@@ -209,8 +209,8 @@ class SatellitePredictor:
         """
         Given a TLE data, loads them into the class
         """
-        default_tle1 = '1 60238U 24128D   24340.58305386  .00011483  00000+0  90379-3 0  9994'
-        default_tle2 = '2 60238  61.9939   6.2098 0030061  10.4413 349.7294 15.00873340 22290'
+        default_tle1 = '1 60238U 24128D   25045.22814065  .00009203  00000+0  69062-3 0  9999'
+        default_tle2 = '2 60238  61.9920 120.2366 0040191  30.6542 329.6885 15.02587810 32905'
 
         self.tle_line1 = tle_line1 if tle_line1 is not None else default_tle1
         self.tle_line2 = tle_line2 if tle_line2 is not None else default_tle2
