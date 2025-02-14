@@ -176,6 +176,34 @@ class SatellitePredictor:
             self.logger.debug(f"Updated TLE for satellite {self.satcat_id}")
         except Exception as e:
             self.logger.error(f"Error updating TLE: {e}")
+            print("going for fallback")
+            self.updateTLE_fallback()
+            
+    def updateTLE_fallback(self):
+        """
+        This funciton will attempt to get the tle from another source if celestrak fails. In this case it will use satnogs
+        """
+        self.logger.debug("Attempting to get TLE from SatNOGS")
+        try:
+            url = "https://db.satnogs.org/api/tle/?&format=json"   # unfortunatly this will get all the tles and we need to search for our sat
+            response = requests.get(url)
+            response.raise_for_status()
+
+            # Parse JSON response
+            data = response.json()
+            for i in range(len(data)):
+                if self.satcat_id == data[i]['norad_cat_id']:
+                    latest_tle = data[i]  # Get the latest TLE entry
+                    tle_line1 = latest_tle['tle1']
+                    tle_line2 = latest_tle['tle2']
+                    break
+            self.tle_line1 = tle_line1
+            self.tle_line2 = tle_line2
+            print("fallback good")
+        except:
+            self.logger.error("Error getting TLE from SatNOGS")
+            return False
+            
 
     def loadTLE(self, tle_line1=None, tle_line2=None):
         """
@@ -439,8 +467,10 @@ def simpleTest():
 
 if __name__ == "__main__":
 
-    
+    print("Creating object")
     sat_predictor = SatellitePredictor()
-    
+    sat_predictor.logger
+    print("updating tle")
+    sat_predictor.updateTLE()
     # sat_predictor.getNextPasses()
     sat_predictor.server.serve_forever()
