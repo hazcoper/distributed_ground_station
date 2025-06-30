@@ -176,7 +176,6 @@ class SatellitePredictor:
             self.logger.debug(f"Updated TLE for satellite {self.satcat_id}")
         except Exception as e:
             self.logger.error(f"Error updating TLE: {e}")
-            print("going for fallback")
             self.updateTLE_fallback()
             
     def updateTLE_fallback(self):
@@ -199,9 +198,10 @@ class SatellitePredictor:
                     break
             self.tle_line1 = tle_line1
             self.tle_line2 = tle_line2
+            self.logger.debug(f"current TLE for satellite {self.satcat_id}:\n{self.tle_line1}\n{self.tle_line2}")
             print("fallback good")
         except:
-            self.logger.error("Error getting TLE from SatNOGS")
+            self.logger.error(f"Error getting TLE from SatNOGS: {e}")
             return False
             
 
@@ -209,8 +209,8 @@ class SatellitePredictor:
         """
         Given a TLE data, loads them into the class
         """
-        default_tle1 = '1 60238U 24128D   25045.22814065  .00009203  00000+0  69062-3 0  9999'
-        default_tle2 = '2 60238  61.9920 120.2366 0040191  30.6542 329.6885 15.02587810 32905'
+        default_tle1 = '1 60238U 24128D   25180.89646745  .00004045  00000+0  28654-3 0  9991'
+        default_tle2 = '2 60238  61.9914   5.9727 0052120  61.8031 298.8311 15.05478104 53319'
 
         self.tle_line1 = tle_line1 if tle_line1 is not None else default_tle1
         self.tle_line2 = tle_line2 if tle_line2 is not None else default_tle2
