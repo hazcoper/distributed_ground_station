@@ -177,6 +177,7 @@ class SatellitePredictor:
         except Exception as e:
             self.logger.error(f"Error updating TLE: {e}")
             self.updateTLE_fallback()
+            self.createSatellite()  # update the tle in the satellite object
             
     def updateTLE_fallback(self):
         """
