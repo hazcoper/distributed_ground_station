@@ -201,7 +201,7 @@ class SatellitePredictor:
             self.tle_line2 = tle_line2
             self.logger.debug(f"current TLE for satellite {self.satcat_id}:\n{self.tle_line1}\n{self.tle_line2}")
             print("fallback good")
-        except:
+        except Exception as e:
             self.logger.error(f"Error getting TLE from SatNOGS: {e}")
             return False
             
