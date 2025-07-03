@@ -11,7 +11,6 @@ from ConfigParser import ConfigParser
 import logging
 
 
-
 def plot_gpredict_like(azimuths, altitudes):
     """
     Creates a Gpredict-like polar plot with azimuth and inverted elevation.
@@ -142,7 +141,11 @@ class SatellitePredictor:
         Sends a list with many dictionaries inside it
         """
         self.logger.debug("Getting next passage remote")
-        data_list = self.getNextPasses()
+        try:
+            data_list = self.getNextPasses()
+        except Exception as e:
+            self.logger.error((f"Error getting next passes: {e}"))
+            raise e
         self.logger.debug(f"  Done getting: {len(data_list)} passages")
         
         return data_list
@@ -254,8 +257,6 @@ class SatellitePredictor:
 
         return alt.degrees, az.degrees, distance.km
 
-    
-    
     def getNextPassage(self):
         """
         Calculates the next passage of the satellite over the observer.
@@ -310,7 +311,6 @@ class SatellitePredictor:
             self.logger.error("No pass found in the specified time window.")
             return None, None, None, None, None
 
-            
     def getNextPasses(self, num_passes=10):
         """
         Calculates the next `num_passes` passages of the satellite over the observer.
@@ -339,6 +339,9 @@ class SatellitePredictor:
         search_start = now
         self.logger.debug(f"Search start time initialized to: {search_start.utc_datetime()}")
 
+        aos, los, peak_elevation = None, None, 0
+        start_azimuth, end_azimuth = None, None
+
         attemptCounter = 0
         while len(passes) < num_passes:
             search_end = self.ts.utc(search_start.utc_datetime() + timedelta(days=1))
@@ -351,9 +354,6 @@ class SatellitePredictor:
                 self.logger.error(f"Error finding events: {e}")
                 break
 
-            aos, los, peak_elevation = None, None, 0
-            start_azimuth, end_azimuth = None, None
-
             for i, event in enumerate(events):
                 time = times[i].utc_datetime()
                 self.logger.debug(f"Processing event {i}: {event} at {time}")
@@ -364,10 +364,16 @@ class SatellitePredictor:
                     start_azimuth = float(topocentric.altaz()[1].degrees)
                     self.logger.debug(f"AOS detected at {aos} with start azimuth: {start_azimuth:.2f}°")
                 elif event == 1:  # Culmination (Peak)
+                    if not aos: # Prevent crash after missing the start of a passage
+                        self.logger.debug(f"Skipping Peak at {time} after missing AOS")
+                        continue
                     topocentric = (self.satellite - self.observer).at(times[i])
                     peak_elevation = float(max(peak_elevation, topocentric.altaz()[0].degrees))
                     self.logger.debug(f"Peak elevation updated to: {peak_elevation:.2f}°")
-                elif event == 2:  # Set (LOS)
+                elif event == 2: # Prevent crash after missing the start of a passage
+                    if not aos:
+                        self.logger.debug(f"Skipping LOS at {time} after missing AOS")
+                        continue
                     los = time
                     topocentric = (self.satellite - self.observer).at(times[i])
                     end_azimuth = float(topocentric.altaz()[1].degrees)
