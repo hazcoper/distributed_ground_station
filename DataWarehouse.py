@@ -38,7 +38,7 @@ import logging
 import json
 import os
 
-import datetime
+from datetime import datetime, timezone
 
 
 
@@ -183,6 +183,13 @@ class DataWarehouse:
         
         return True    
     
+    def utcString(self, timestamp: float | None) -> str:
+        if not timestamp:
+            time = datetime.now(timezone.utc)
+        else:
+            time = datetime.fromtimestamp(timestamp, timezone.utc)
+        return time.strftime('%Y-%m-%d_%H:%M:%S')
+
     def dumpData(self, filename = None, folder="data"):
         """
         Will dump all of the data to a json file
@@ -191,7 +198,7 @@ class DataWarehouse:
         self.logger.debug("Dumping data to json file")
         
         # filename is the current date and time
-        filename = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S") + ".json" if filename is None else filename
+        filename = self.utcString(None) + ".json" if filename is None else filename
         
         # check to see if folder exits if not create it
         if not os.path.exists(folder):
@@ -204,6 +211,7 @@ class DataWarehouse:
         
         return True
     
+
     ######################################################################################
     #
     # Remote functions that will be called by the different modules
@@ -241,9 +249,9 @@ class DataWarehouse:
             return False
         self.logger.debug("Passage does not exist")
 
-        # the data already comes in the format that I am expectingm just need to convert the timestamp to human readable
-        data_dict["aos"] = datetime.datetime.fromtimestamp(data_dict["aos"]).strftime('%Y-%m-%d_%H:%M:%S')
-        data_dict["los"] = datetime.datetime.fromtimestamp(data_dict["los"]).strftime('%Y-%m-%d_%H:%M:%S')
+        # the data already comes in the format that I am expecting, just need to convert the timestamp to human readable
+        data_dict["aos"] = self.utcString(data_dict["aos"])
+        data_dict["los"] = self.utcString(data_dict["los"])
         
         # add the passage to the dictionary
         self.passageDict[data_dict["passage_number"]] = data_dict
@@ -267,8 +275,8 @@ class DataWarehouse:
             self.logger.error("ReceiveKiss: Data is not in the correct format")
             return False
         
-                # the data already comes in the format that i am expecting, just need to convert the timestamp to human readable
-        data_dict["timestamp"] = datetime.datetime.fromtimestamp(data_dict["timestamp"]).strftime('%Y-%m-%d_%H:%M:%S.%f')[:-3]
+        # the data already comes in the format that i am expecting, just need to convert the timestamp to human readable
+        data_dict["timestamp"] = self.utcString(data_dict["timestamp"])[:-3]
         self.logger.debug(f"  Timestamp: {data_dict['timestamp']}")
         
         # check if the passage is already in the dictionary
