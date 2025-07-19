@@ -133,13 +133,22 @@ class TncClient:
 
     def receiveData(self):
         try:
+            # set timeout
+            self.logger.debug(f"Receiving data from TNC at {self.tncHost}:{self.tncPort}")
             self.data = self.client.recv(1024)
             self.last_message_timestamp = datetime.datetime.now().timestamp()    # not sure if this is okay. Do i get many things that are not a valid message?
+            
+            # check to see if client has disconnected
+            if self.data == b'':
+                self.logger.warning(f"Connection closed by TNC at {self.tncHost}:{self.tncPort}")
+                self.client.close()
+                self.client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # recreate the socket
+                return -1  # this will forece to enter attmptConnection
+
         except Exception as e:
             self.logger.error(f"Error receiving data from TNC: {e}")
-            return False
-        
-        return True 
+            return -1
+        return 1
     
     def processData(self):
         """
