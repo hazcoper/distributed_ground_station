@@ -225,8 +225,8 @@ def startSingle(tncHost, tncPort):
                 
 if __name__ == "__main__":
     
-    host_list = ["178.166.52.139", "172.20.38.66"]
-    port_list = [12000, 7000]
+    host_list = ["172.20.38.89", "172.20.38.66"]
+    port_list = [8001, 7000]
     
     threading_list = []
     
