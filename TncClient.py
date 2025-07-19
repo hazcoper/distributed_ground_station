@@ -143,12 +143,12 @@ class TncClient:
                 self.logger.warning(f"Connection closed by TNC at {self.tncHost}:{self.tncPort}")
                 self.client.close()
                 self.client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # recreate the socket
-                return -1  # this will forece to enter attmptConnection
+                return False  # this will forece to enter attmptConnection
 
         except Exception as e:
             self.logger.error(f"Error receiving data from TNC: {e}")
-            return -1
-        return 1
+            return False
+        return True
     
     def processData(self):
         """
